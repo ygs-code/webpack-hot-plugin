@@ -1,0 +1,41 @@
+{
+  "name": "webpack-hot-plugin",
+  "version": "2.25.1",
+  "description": "Webpack hot reloading you can attach to your own server",
+  "keywords": [
+    "webpack",
+    "hmr",
+    "hot",
+    "module",
+    "reloading",
+    "hot-reloading",
+    "webpack-hot-plugin",
+    "express"
+  ],
+  "main": "plugin.js",
+  "scripts": {
+    "test": "mocha",
+    "coverage": "nyc npm run test",
+    "lint": "eslint . --max-warnings 0",
+    "prettier": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qq281113270/webpack-hot-plugin.git"
+  },
+  "author": "Yao guan shou <281113270@qq.com>",
+  "license": "MIT",
+  "dependencies": {
+    "ansi-html-community": "0.0.8",
+    "html-entities": "^2.1.0",
+    "querystring": "^0.2.0",
+    "strip-ansi": "^6.0.0"
+  },
+  "devDependencies": {
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "arrowParens": "always"
+  }
+}
