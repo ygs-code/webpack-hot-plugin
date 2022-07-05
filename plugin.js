@@ -1,23 +1,10 @@
+/* eslint-disable   */
 
-const fs = require("fs");
-const path = require("path");
-const WebSocket = require("ws");
-const portfinder = require("portfinder");
-const clientSrc = fs
-  .readFileSync(path.join(__dirname, "./client-socket.js"))
-  .toString();
-const clientBrowser = fs
-  .readFileSync(path.join(__dirname, "./client-browser.js"))
-  .toString();
-
-const createClient = (data) => {
-  let src = clientSrc;
-  // eslint-disable-next-line guard-for-in
-  for (const key in data) {
-    src = src.replace("/*" + key + "*/", data[key]);
-  }
-  return src;
-};
+const webpack = require('webpack');
+const fs = require('fs');
+const path = require('path');
+const WebSocket = require('ws');
+const portfinder = require('portfinder');
 
 class WebpackHotPlugin {
   constructor(options) {
@@ -37,11 +24,7 @@ class WebpackHotPlugin {
       ansiColors: '{}',
       ...options,
     };
-    this.latestStats = {}
-  }
-
-  async start () {
-    const { options } = this;
+    this.latestStats = {};
     let {
       port,
       retryWait,
@@ -56,7 +39,37 @@ class WebpackHotPlugin {
       overlayStyles,
       overlayWarnings,
       ansiColors,
-    } = options
+    } = this.options;
+    this.clientBrowser = this.readFile('./client-browser.js');
+    this.clientSrc = this.createClient(this.readFile('./client-socket.js'), {
+      port,
+      retryWait,
+      delay,
+      enabled,
+      reload,
+      overlay,
+      log,
+      warn,
+      name,
+      autoConnect,
+      overlayStyles,
+      overlayWarnings,
+      ansiColors,
+    });
+  }
+  readFile(src) {
+    return fs.readFileSync(path.join(__dirname, src)).toString();
+  }
+  createClient(fileStr, data) {
+    // eslint-disable-next-line guard-for-in
+    for (const key in data) {
+      fileStr = fileStr.replace('/*' + key + '*/', data[key]);
+    }
+    return fileStr;
+  }
+  async start() {
+    const { options } = this;
+    let { port } = options;
 
     // 设置静态服务器
     portfinder.basePort = port;
@@ -74,36 +87,18 @@ class WebpackHotPlugin {
 
     this.wss = new WebSocket.Server({ port });
 
-    this.wss.on("connection", (ws) => {
+    this.wss.on('connection', (ws) => {
       // 远程socket
-      this.broadcast(
-        this.latestStats
-      );
-    });
-
-    this.clientSrc = createClient({
-      port,
-      retryWait,
-      delay,
-      enabled,
-      reload,
-      overlay,
-      log,
-      warn,
-      name,
-      autoConnect,
-      overlayStyles,
-      overlayWarnings,
-      ansiColors,
+      this.broadcast(this.latestStats);
     });
   }
 
-  broadcast (message) {
-    message = JSON.stringify(message)
+  broadcast(message) {
+    message = JSON.stringify(message);
     this.wss.clients.forEach((client) => client.send(message));
   }
   //   做兼容
-  hook (compiler, hookName, pluginName, fn) {
+  hook(compiler, hookName, pluginName, fn) {
     if (arguments.length === 3) {
       fn = pluginName;
       pluginName = hookName;
@@ -115,9 +110,10 @@ class WebpackHotPlugin {
     }
   }
 
-
-
-  publishStats (statsResult) {
+  publishStats(statsResult) {
+    let action = null;
+    let errors = [];
+    let warnings = [];
     var stats = statsResult.toJson({
       // all: false,
       // cached: true,
@@ -127,45 +123,42 @@ class WebpackHotPlugin {
       // hash: true,
     });
 
-    if (statsResult.hasErrors()) {
-      for (let item of stats.errors) {
-        const {
-          action = 'error',
-          time,
-          hash,
-          warnings = [],
-          message = [],
-        } = item;
-        this.latestStats = {
-          name: '',
-          action: action,
-          time: time || '',
-          hash: hash || '',
-          warnings: warnings || [],
-          errors: [message],
-        };
-        this.broadcast(this.latestStats)
-      }
-    } else if (statsResult.hasWarnings()) {
+    this.latestStats = {
+      name: '',
+      action: action,
+      time: '',
+      hash: '',
+      warnings: [],
+      errors: [],
+    };
+
+    if (statsResult.hasWarnings()) {
+      action = 'warning';
       for (let item of stats.warnings) {
-        const {
-          action = 'warnings',
-          time,
-          hash,
-          errors = [],
-          message = [],
-        } = item;
+        const { message = [] } = item;
+        warnings.push(message);
         this.latestStats = {
-          name: '',
-          action: action,
-          time: time || '',
-          hash: hash || '',
-          warnings: [message] || [],
-          errors: errors || [],
+          ...this.latestStats,
+          action,
+          warnings,
         };
-        this.broadcast(this.latestStats)
       }
-    } else {
+    }
+
+    if (statsResult.hasErrors()) {
+      action = 'error';
+      for (let item of stats.errors) {
+        const { message = [] } = item;
+        errors.push(message);
+        this.latestStats = {
+          ...this.latestStats,
+          action,
+          errors,
+        };
+      }
+    }
+
+    if (!action) {
       this.latestStats = {
         name: '',
         action: 'success',
@@ -174,34 +167,50 @@ class WebpackHotPlugin {
         warnings: [],
         errors: [],
       };
-      this.broadcast(this.latestStats)
+      this.broadcast(this.latestStats);
       this.latestStats = {
         ...this.latestStats,
-        action: 'sync',
+        action: null,
       };
+      return false;
     }
+
+    this.broadcast(this.latestStats);
   }
 
-  apply (compiler) {
+  apply(compiler) {
     const { options = {}, clientSrc } = this;
-    const { compilerWatch = () => { } } = options;
+    const { compilerWatch = () => {} } = options;
     //  开始编译 只会调用一次
-    this.hook(compiler, "afterPlugins", async (compilation) => {
+    this.hook(compiler, 'afterPlugins', async (compilation) => {
       if (!this.wss) {
         await this.start();
       }
     });
 
-    this.hook(compiler, "invalid", 'webpack-hot-plugin', (statsResult) => {});
+    this.hook(compiler, 'compile', 'webpack-hot-plugin', (statsResult) => {
+      // console.log('compile=====================================');
+    });
+    this.hook(compiler, 'invalid', 'webpack-hot-plugin', (compilation) => {
+      console.log('invalid==========');
+      this.broadcast({
+        name: '',
+        action: 'building',
+        time: '',
+        hash: '',
+        warnings: [],
+        errors: [],
+      });
+    });
+
     // 编译
-    this.hook(compiler, "emit", 'webpack-hot-plugin', (compilation) => {
-      const { clientSrc } = this;
+    this.hook(compiler, 'emit', 'webpack-hot-plugin', (compilation) => {
+       
       for (const name in compilation.assets) {
-        if (compilation.assets.hasOwnProperty(name) && name.endsWith(".js")) {
+        if (compilation.assets.hasOwnProperty(name) && name.endsWith('.js')) {
           const contents = compilation.assets[name].source();
           const withoutComments =
-            clientBrowser +
-            "\n" + clientSrc + "\n" + contents;
+            this.clientBrowser + '\n' + this.clientSrc + '\n' + contents;
           compilation.assets[name] = {
             source: () => withoutComments,
             size: () => withoutComments.length,
@@ -210,24 +219,11 @@ class WebpackHotPlugin {
       }
     });
     // 发送消息
-    this.hook(compiler, "done", 'webpack-hot-plugin', (statsResult) => {
-      this.publishStats(statsResult)
+    this.hook(compiler, 'done', 'webpack-hot-plugin', (statsResult) => {
+      this.publishStats(statsResult);
     });
-
   }
 }
 
 module.exports = WebpackHotPlugin;
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* eslint-enable   */

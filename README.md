@@ -1,5 +1,4 @@
 # Webpack Hot  plugin
-
 Webpack hot reloading using only Webpack Hot  plugin     This allows you to add hot reloading into an existing server without [webpack-dev-server](https://webpack.js.org/configuration/dev-server/).
 
 This module is **only** concerned with the mechanisms to connect a browser client to a webpack server & receive updates. It will subscribe to changes from the server and execute those changes using [webpack's HMR API](https://webpack.js.org/concepts/hot-module-replacement/). Actually making your application capable of using hot reloading to make seamless changes is out of scope, and usually handled by another library.
@@ -79,4 +78,4 @@ plugins: [
  
 ```
 
- author : yao guan shou
+ author : 姚观寿 (yao guan shou)

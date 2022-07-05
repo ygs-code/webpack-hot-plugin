@@ -1,15 +1,14 @@
 /* eslint-disable*/
-; (function () {
+(function () {
   // 初始化参数，创建，连接
-  function Client (config) {
-
-    this.config = config
+  function Client(config) {
+    this.config = config;
     // 创建
-    this.reporter = this.createReporter()
+    this.reporter = this.createReporter();
   }
 
   Client.prototype = {
-    windowReload (messaves = []) {
+    windowReload(messaves = []) {
       if (!messaves.length) {
         window.location.reload();
         return;
@@ -24,14 +23,18 @@
       } else {
         sessionStorage.setItem(key, key);
         window.location.reload();
-
       }
     },
     log: function (message) {
-      console.info('%c browser-reload-error-overlay-wepback-plugin ' + (config.enabled ? '' : '(Disabled) '), 'background:#CB5C0D; padding:2px; border-radius:3px; color:#fff', message);
+      console.info(
+        '%c webpack-hot-plugin ' +
+          (this.config.enabled ? '' : '(Disabled) '),
+        'background:#CB5C0D; padding:2px; border-radius:3px; color:#fff',
+        message
+      );
     },
     createReporter: function () {
-      var options = this.config
+      var options = this.config;
       var strip = require('strip-ansi');
 
       var overlay;
@@ -47,7 +50,7 @@
         warnings: 'color: #999933;',
       };
       var previousProblems = null;
-      function log (type, obj) {
+      function log(type, obj) {
         var newProblems = obj[type]
           .map(function (msg) {
             return strip(msg);
@@ -55,14 +58,15 @@
           .join('\n');
 
         if (previousProblems == newProblems) {
-          // return;
+          return;
         } else {
           previousProblems = newProblems;
         }
 
         var style = styles[type];
         var name = obj.name ? "'" + obj.name + "' " : '';
-        var title = '[HMR] bundle ' + name + 'has ' + obj[type].length + ' ' + type;
+        var title =
+          'webpack-hot-plugin [HMR] bundle ' + name + 'has ' + obj[type].length + ' ' + type;
         // NOTE: console.warn or console.error will print the stack trace
         // which isn't helpful here, so using console.log to escape it.
         if (console.group && console.groupEnd) {
@@ -113,28 +117,21 @@
       }
     },
     processMessage: function (obj) {
-      var reporter = this.reporter
-      _this = this
+      var options = this.config;
+      var reporter = this.reporter;
+      _this = this;
+
       switch (obj.action) {
         case 'building':
           if (options.log) {
-            console.log(
-              '[HMR] bundle ' +
-              (obj.name ? "'" + obj.name + "' " : '') +
-              'rebuilding'
-            );
+            _this.log('[HMR] bundle rebuilding');
           }
-          // window.location.reload();
           break;
         case 'built':
           if (options.log) {
-            console.log(
-              '[HMR] bundle ' +
-              (obj.name ? "'" + obj.name + "' " : '') +
-              'rebuilt in ' +
-              obj.time +
-              'ms'
-            );
+            if (options.log) {
+              _this.log('[HMR] bundle rebuilt');
+            }
           }
 
         case 'error':
@@ -144,11 +141,11 @@
             }
           }
           break;
-        case 'warnings':
-          if (obj.warnings.length > 0) {
+        case 'warning':
+          if (options.warn && obj.warnings.length > 0) {
             if (reporter) {
               reporter.problems('warnings', obj);
-              _this.windowReload(obj.warnings)
+              _this.windowReload(obj.warnings);
             }
           }
           break;
@@ -156,19 +153,17 @@
           break;
         case 'success':
           // window.location.reload();
-          _this.windowReload()
+          _this.windowReload();
           break;
         default:
       }
-
-
     },
-  }
+  };
 
-  let key = 'webpack-hot-plugin-client'
+  let key = 'webpack-hot-plugin-client';
   if (window[key]) {
-    return
+    return;
   }
-  window[key] = Client
+  window[key] = Client;
 })();
 /* eslint-disable*/
