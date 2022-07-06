@@ -189,10 +189,8 @@ class WebpackHotPlugin {
     });
 
     this.hook(compiler, 'compile', 'webpack-hot-plugin', (statsResult) => {
-      // console.log('compile=====================================');
     });
     this.hook(compiler, 'invalid', 'webpack-hot-plugin', (compilation) => {
-      console.log('invalid==========');
       this.broadcast({
         name: '',
         action: 'building',

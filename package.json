@@ -1,6 +1,6 @@
 {
   "name": "webpack-hot-plugin",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Webpack hot reloading you can attach to your own server",
   "keywords": [
     "webpack",
